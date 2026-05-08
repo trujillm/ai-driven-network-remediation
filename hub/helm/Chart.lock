@@ -5,5 +5,8 @@ dependencies:
 - name: llama-stack
   repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
   version: 0.7.4
-digest: sha256:cf4bb1596242817a857773cdc3d153819715b7821beb5f68051815e883b264dd
-generated: "2026-05-08T12:39:45.255501604+02:00"
+- name: minio
+  repository: https://rh-ai-quickstart.github.io/ai-architecture-charts
+  version: 0.5.5
+digest: sha256:eb9d3fc843b5ac7042b909b4cef398feb27cf06f4b82896ce2ebab517bca4e87
+generated: "2026-05-12T12:11:16.757323309+02:00"
