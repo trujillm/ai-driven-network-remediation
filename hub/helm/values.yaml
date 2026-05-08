@@ -7,6 +7,22 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "0.0.1"
 
+pgvector:
+  secret:
+    user: postgres
+    password: rag_password
+    dbname: rag_blueprint
+    host: pgvector
+    port: "5432"
+
+llama-stack:
+  replicaCount: 1
+  initContainers:
+    enabled: true
+  resources: {}
+  pgvector:
+    enabled: true
+
 chatbotService:
   replicaCount: 1
 
