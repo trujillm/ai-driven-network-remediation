@@ -7,6 +7,10 @@ image:
   # Overrides the image tag whose default is the chart appVersion.
   tag: "0.0.1"
 
+global:
+  routes:
+    enabled: true
+
 pgvector:
   secret:
     user: postgres
