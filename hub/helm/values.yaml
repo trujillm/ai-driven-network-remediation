@@ -79,3 +79,105 @@ minio:
     port: "9000"
   sampleFileUpload:
     enabled: false
+# ── MCP Servers (subchart: mcp-servers) ──────────────────────────
+# Deployed via the shared mcp-servers Helm chart from ai-architecture-charts.
+# Each server is a FastMCP service exposing tools to the AI remediation agent.
+# Set skipRoute: true for Kind/non-OpenShift clusters (CI).
+mcp-servers:
+  enabled: true
+  mcp-servers:
+    noc-openshift:
+      enabled: true
+      deploymentMode: deployment
+      image:
+        repository: quay.io/rh-ai-quickstart/noc-mcp-openshift
+        tag: "0.1.0"
+      port: 8000
+      targetPort: 8000
+      transport: sse
+      imagePullPolicy: IfNotPresent
+      env:
+        MCP_TRANSPORT: "sse"
+        MCP_PORT: "8000"
+
+    noc-lokistack:
+      enabled: true
+      deploymentMode: deployment
+      image:
+        repository: quay.io/rh-ai-quickstart/noc-mcp-lokistack
+        tag: "0.1.0"
+      port: 8000
+      targetPort: 8000
+      transport: sse
+      imagePullPolicy: IfNotPresent
+      env:
+        MCP_TRANSPORT: "sse"
+        MCP_PORT: "8000"
+
+    noc-kafka:
+      enabled: true
+      deploymentMode: deployment
+      image:
+        repository: quay.io/rh-ai-quickstart/noc-mcp-kafka
+        tag: "0.1.0"
+      port: 8000
+      targetPort: 8000
+      transport: sse
+      imagePullPolicy: IfNotPresent
+      env:
+        MCP_TRANSPORT: "sse"
+        MCP_PORT: "8000"
+
+    noc-aap:
+      enabled: true
+      deploymentMode: deployment
+      image:
+        repository: quay.io/rh-ai-quickstart/noc-mcp-aap
+        tag: "0.1.0"
+      port: 8000
+      targetPort: 8000
+      transport: sse
+      imagePullPolicy: IfNotPresent
+      env:
+        MCP_TRANSPORT: "sse"
+        MCP_PORT: "8000"
+
+    noc-slack:
+      enabled: true
+      deploymentMode: deployment
+      image:
+        repository: quay.io/rh-ai-quickstart/noc-mcp-slack
+        tag: "0.1.0"
+      port: 8000
+      targetPort: 8000
+      transport: sse
+      imagePullPolicy: IfNotPresent
+      env:
+        MCP_TRANSPORT: "sse"
+        MCP_PORT: "8000"
+
+    noc-servicenow:
+      enabled: true
+      deploymentMode: deployment
+      image:
+        repository: quay.io/rh-ai-quickstart/noc-mcp-servicenow
+        tag: "0.1.0"
+      port: 8000
+      targetPort: 8000
+      transport: sse
+      imagePullPolicy: IfNotPresent
+      env:
+        MCP_TRANSPORT: "sse"
+        MCP_PORT: "8000"
+
+    # Disable default servers from the shared chart
+    weather:
+      enabled: false
+    oracle-sqlcl:
+      enabled: false
+    github-mcp:
+      enabled: false
+    openshift-mcp:
+      enabled: false
+    slack-mcp:
+      enabled: false
