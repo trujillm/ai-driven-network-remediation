@@ -224,7 +224,19 @@ integration-tests:
 	PF1_PID=$$!; \
 	oc port-forward -n $(NAMESPACE) svc/hub-ingestion-pipeline 8000:8000 & \
 	PF2_PID=$$!; \
-	trap "kill $$PF1_PID $$PF2_PID" EXIT; \
+	oc port-forward -n $(NAMESPACE) svc/mcp-noc-openshift 8001:8000 & \
+	PF3_PID=$$!; \
+	oc port-forward -n $(NAMESPACE) svc/mcp-noc-lokistack 8002:8000 & \
+	PF4_PID=$$!; \
+	oc port-forward -n $(NAMESPACE) svc/mcp-noc-kafka 8003:8000 & \
+	PF5_PID=$$!; \
+	oc port-forward -n $(NAMESPACE) svc/mcp-noc-aap 8004:8000 & \
+	PF6_PID=$$!; \
+	oc port-forward -n $(NAMESPACE) svc/mcp-noc-slack 8005:8000 & \
+	PF7_PID=$$!; \
+	oc port-forward -n $(NAMESPACE) svc/mcp-noc-servicenow 8006:8000 & \
+	PF8_PID=$$!; \
+	trap "kill $$PF1_PID $$PF2_PID $$PF3_PID $$PF4_PID $$PF5_PID $$PF6_PID $$PF7_PID $$PF8_PID" EXIT; \
 	sleep 2 && cd hub/integration-tests && uv run pytest
 
 # ── Langfuse day-2 targets ───────────────────────────────────────
