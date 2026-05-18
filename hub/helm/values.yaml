@@ -141,6 +141,8 @@ mcp-servers:
       env:
         MCP_TRANSPORT: "sse"
         MCP_PORT: "8000"
+        AAP_USERNAME: "placeholder"
+        AAP_PASSWORD: "placeholder"
 
     noc-slack:
       enabled: true
@@ -169,6 +171,7 @@ mcp-servers:
       env:
         MCP_TRANSPORT: "sse"
         MCP_PORT: "8000"
+        SERVICENOW_API_KEY: "placeholder"
 
     # Disable default servers from the shared chart
     weather:
