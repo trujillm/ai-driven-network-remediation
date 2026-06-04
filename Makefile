@@ -64,6 +64,10 @@ MINIO_HELM_EXTRA_ARGS  ?=
 ENABLE_AAP_MOCK        ?= false
 AAP_MOCK_IMG           := $(REGISTRY)/aap-mock:$(VERSION)
 
+# ── ServiceNow Mock (optional: ENABLE_SERVICENOW_MOCK=true) ────
+ENABLE_SERVICENOW_MOCK ?= false
+SERVICENOW_MOCK_IMG    := $(REGISTRY)/servicenow-mock:$(VERSION)
+
 ADNR_LLM_ENABLED := $(and $(ADNR_LLM_ID),$(ADNR_LLM_URL),$(ADNR_LLM_TOKEN))
 
 helm_adnr_llm_args = \
@@ -89,6 +93,11 @@ helm_mcp_image_args = \
 helm_aap_mock_args = \
 	$(if $(filter true,$(ENABLE_AAP_MOCK)),--set mcp-servers.mcp-servers.noc-aap.env.AAP_URL=http://aap-mock.$(NAMESPACE).svc:8080,) \
 	$(if $(filter true,$(ENABLE_AAP_MOCK)),--set mcp-servers.mcp-servers.noc-aap.env.AAP_VERIFY_SSL=false,)
+
+helm_servicenow_mock_args = \
+	$(if $(filter true,$(ENABLE_SERVICENOW_MOCK)),--set mcp-servers.mcp-servers.noc-servicenow.env.SERVICENOW_URL=http://servicenow-mock.$(NAMESPACE).svc:8080,) \
+	$(if $(filter true,$(ENABLE_SERVICENOW_MOCK)),--set mcp-servers.mcp-servers.noc-servicenow.env.SERVICENOW_MODE=mock,) \
+	$(if $(filter true,$(ENABLE_SERVICENOW_MOCK)),--set-string mcpSecrets.servicenow.apiKey=demo-api-key-2026,)
 
 .PHONY: build-all-images
 build-all-images: build-chatbot-image build-agent-image build-mcp-images
@@ -134,6 +143,17 @@ deploy-aap-mock: namespace
 	oc set image -n $(NAMESPACE) deployment/aap-mock aap-mock=$(AAP_MOCK_IMG)
 	oc rollout status -n $(NAMESPACE) deployment/aap-mock --timeout=60s
 
+.PHONY: build-push-servicenow-mock
+build-push-servicenow-mock:
+	$(CONTAINER_TOOL) build -t $(SERVICENOW_MOCK_IMG) --platform=$(ARCH) -f hub/infra/servicenow-mock/Containerfile hub/infra/servicenow-mock
+	$(CONTAINER_TOOL) push $(SERVICENOW_MOCK_IMG) $(PUSH_EXTRA_ARGS)
+
+.PHONY: deploy-servicenow-mock
+deploy-servicenow-mock: namespace
+	oc apply -n $(NAMESPACE) -f hub/infra/servicenow-mock/k8s.yaml
+	oc set image -n $(NAMESPACE) deployment/servicenow-mock servicenow-mock=$(SERVICENOW_MOCK_IMG)
+	oc rollout status -n $(NAMESPACE) deployment/servicenow-mock --timeout=60s
+
 .PHONY: reinstall-all
 reinstall-all:
 	cd hub/chatbot-service && uv sync --reinstall
@@ -156,6 +176,9 @@ endif
 ifeq ($(ENABLE_AAP_MOCK),true)
 	$(MAKE) deploy-aap-mock
 endif
+ifeq ($(ENABLE_SERVICENOW_MOCK),true)
+	$(MAKE) deploy-servicenow-mock
+endif
 ifeq ($(ENABLE_HUB),true)
 	@oc get secret noc-openshift-edge-kubeconfig -n $(NAMESPACE) > /dev/null 2>&1 || \
 		hub/mcp-servers/mcp-openshift/deploy/setup-edge-rbac.sh $(EDGE_NAMESPACE) $(NAMESPACE)
@@ -174,6 +197,7 @@ ifeq ($(ENABLE_HUB),true)
 		--set-string lokistack.namespace='$(LOKISTACK_NAMESPACE)' \
 		$(helm_adnr_llm_args) \
 		$(helm_aap_mock_args) \
+		$(helm_servicenow_mock_args) \
 		$(HELM_EXTRA_ARGS) \
 		--wait --timeout 30m
 else
@@ -213,6 +237,9 @@ ifeq ($(ENABLE_KAFKA),true)
 endif
 ifeq ($(ENABLE_AAP_MOCK),true)
 	oc delete -n $(NAMESPACE) -f hub/infra/aap-mock/k8s.yaml --ignore-not-found
+endif
+ifeq ($(ENABLE_SERVICENOW_MOCK),true)
+	oc delete -n $(NAMESPACE) -f hub/infra/servicenow-mock/k8s.yaml --ignore-not-found
 endif
 endif
 
