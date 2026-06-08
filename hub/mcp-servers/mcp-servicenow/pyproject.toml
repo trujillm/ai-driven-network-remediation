@@ -2,6 +2,7 @@
 name = "mcp-servicenow"
 version = "0.1.0"
 description = "MCP server wrapping the ServiceNow REST API for the AI remediation agent"
+readme = "README.md"
 authors = [
     { name = "rh-ai-quickstart" }
 ]

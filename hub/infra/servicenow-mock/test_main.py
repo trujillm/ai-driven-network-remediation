@@ -1,4 +1,10 @@
-"""Unit tests for the ServiceNow mock server."""
+"""Unit tests for the ServiceNow mock server.
+
+Run via:
+    cd hub/infra/servicenow-mock && uv sync --group dev && uv run pytest
+
+Also included in: make unit-tests
+"""
 
 import pytest
 from fastapi.testclient import TestClient
@@ -142,14 +148,17 @@ class TestUpdateIncident:
 
 class TestListIncidents:
     def test_list_all(self, client):
-        client.post(
+        created = client.post(
             "/api/now/table/incident",
             json={"record": {"short_description": "list test", "priority": "3"}},
             headers=HEADERS,
-        )
+        ).json()
+        number = created["record"]["number"]
+
         resp = client.get("/api/now/table/incident", headers=HEADERS)
         assert resp.status_code == 200
-        assert resp.json()["count"] >= 1
+        numbers = [i["number"] for i in resp.json()["result"]]
+        assert number in numbers
 
     def test_filter_by_state(self, client):
         created = client.post(
