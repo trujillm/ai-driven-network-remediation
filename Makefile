@@ -246,6 +246,9 @@ ifeq ($(ENABLE_SERVICENOW_MOCK),true)
 	oc delete -n $(NAMESPACE) -f hub/infra/servicenow-mock/k8s.yaml --ignore-not-found
 endif
 endif
+	$(MAKE) edge-rbac-teardown
+	oc delete namespace $(EDGE_NAMESPACE) --ignore-not-found
+	oc delete namespace $(NAMESPACE) --ignore-not-found
 
 .PHONY: edge-rbac-teardown
 edge-rbac-teardown:
