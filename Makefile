@@ -89,6 +89,10 @@ ALL_BUILD_PUSH_IMAGES := \
 
 ADNR_LLM_ENABLED := $(and $(ADNR_LLM_ID),$(ADNR_LLM_URL),$(ADNR_LLM_TOKEN))
 
+.PHONY: version
+version:
+	@echo $(VERSION)
+
 helm_adnr_llm_args = \
 	$(if $(ADNR_LLM_ENABLED),--set llama-stack.models.adnr-llm.enabled=true,) \
 	$(if $(ADNR_LLM_ENABLED),--set-string llama-stack.models.adnr-llm.id='$(ADNR_LLM_ID)',) \
