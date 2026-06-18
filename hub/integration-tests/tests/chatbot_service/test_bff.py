@@ -25,6 +25,9 @@ def test_summary(chatbot_client):
     assert "cluster" in data
     assert "timestamp" in data
     assert data["agent_status"] == "running"
+    assert isinstance(data["servicenow"], dict)
+    assert "mode" in data["servicenow"]
+    assert "reachable" in data["servicenow"]
 
 
 def test_integrations(chatbot_client):
@@ -53,8 +56,10 @@ def test_chat(chatbot_client):
     data = response.json()
     assert "reply" in data
     assert "session_id" in data
-    assert "model_name" in data
-    assert "model_source" in data
+    assert "model" in data
+    assert data["model"]["name"]
+    assert data["model"]["source"]
+    assert "context" in data
     assert len(data["reply"]) > 0
 
 
@@ -72,9 +77,12 @@ def test_demo_trigger(chatbot_client):
         "/api/demo/trigger",
         json={"scenario": "crashloop", "site": "edge-01"},
     )
-    assert response.status_code == 200
     data = response.json()
-    assert data["status"] in ("queued", "error")
-    if data["status"] == "queued":
+    if response.status_code == 200:
+        assert data["status"] == "queued"
         assert data["scenario"] == "crashloop"
         assert "kafka_offset" in data
+        assert "incident_id" in data
+    else:
+        assert response.status_code == 502
+        assert data["status"] == "error"

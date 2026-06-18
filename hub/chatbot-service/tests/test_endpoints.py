@@ -16,7 +16,7 @@ def test_health(client):
 
 @patch("chatbot_service.fetch_servicenow_incident_count", new_callable=AsyncMock)
 def test_summary(mock_snow, client):
-    mock_snow.return_value = (3, "up")
+    mock_snow.return_value = (3, {"mode": "mock", "reachable": True})
     resp = client.get("/api/summary")
     assert resp.status_code == 200
     data = resp.json()
@@ -24,7 +24,7 @@ def test_summary(mock_snow, client):
     assert data["cluster"] == "hub"
     assert data["site"] == "edge-01"
     assert data["open_incidents"] == 3
-    assert data["servicenow"] == "up"
+    assert data["servicenow"] == {"mode": "mock", "reachable": True}
     assert "timestamp" in data
 
 
@@ -72,6 +72,7 @@ def test_demo_trigger(mock_publish, client):
     assert data["status"] == "queued"
     assert data["scenario"] == "oom"
     assert data["kafka_offset"] == 42
+    assert "incident_id" in data
     assert "event_message" in data
     assert "OOMKilled" in data["event_message"]
 
@@ -100,7 +101,7 @@ def test_demo_trigger_kafka_failure(mock_publish, client):
 @patch("chatbot_service.fetch_servicenow_incident_count", new_callable=AsyncMock)
 @patch("chatbot_service.call_model", new_callable=AsyncMock)
 def test_chat(mock_model, mock_snow, mock_integrations, client):
-    mock_snow.return_value = (1, "up")
+    mock_snow.return_value = (1, {"mode": "mock", "reachable": True})
     mock_integrations.return_value = {
         "total": 7,
         "up": 7,
@@ -118,17 +119,17 @@ def test_chat(mock_model, mock_snow, mock_integrations, client):
     assert resp.status_code == 200
     data = resp.json()
     assert "reply" in data
-    assert data["model_name"] == "granite-4-h-tiny"
-    assert data["model_source"] == "live"
+    assert data["model"]["name"] == "granite-4-h-tiny"
+    assert data["model"]["source"] == "live"
     assert "session_id" in data
-    assert data["open_incidents"] == 1
+    assert data["context"]["open_incidents"] == 1
 
 
 @patch("chatbot_service.get_integrations", new_callable=AsyncMock)
 @patch("chatbot_service.fetch_servicenow_incident_count", new_callable=AsyncMock)
 @patch("chatbot_service.call_model", new_callable=AsyncMock)
 def test_chat_model_unavailable(mock_model, mock_snow, mock_integrations, client):
-    mock_snow.return_value = (0, "up")
+    mock_snow.return_value = (0, {"mode": "mock", "reachable": True})
     mock_integrations.return_value = {
         "total": 7,
         "up": 5,
@@ -144,7 +145,7 @@ def test_chat_model_unavailable(mock_model, mock_snow, mock_integrations, client
     assert resp.status_code == 200
     data = resp.json()
     assert "model unavailable" in data["reply"].lower() or "fallback" in data["reply"].lower()
-    assert data["model_source"] == "unreachable"
+    assert data["model"]["source"] == "unreachable"
 
 
 def test_chat_empty_message(client):

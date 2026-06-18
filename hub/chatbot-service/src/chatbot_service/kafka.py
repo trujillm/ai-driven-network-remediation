@@ -74,7 +74,7 @@ def fetch_recent_audits() -> list[dict[str, Any]]:
     return records
 
 
-def build_demo_event(scenario: str, site: str) -> dict[str, Any]:
+def build_demo_event(scenario: str, site: str, incident_id: str) -> dict[str, Any]:
     """Build a structured log event for a demo failure scenario."""
     now = datetime.now(timezone.utc).isoformat()
     normalized = scenario.strip().lower()
@@ -93,6 +93,7 @@ def build_demo_event(scenario: str, site: str) -> dict[str, Any]:
 
     return {
         "@timestamp": now,
+        "incident_id": incident_id,
         "message": message,
         "level": "error",
         "kubernetes": {

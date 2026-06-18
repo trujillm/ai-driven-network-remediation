@@ -151,14 +151,14 @@ async def ready():
 
 @app.get("/api/summary")
 async def summary() -> dict:
-    tickets, servicenow_state = await fetch_servicenow_incident_count()
+    tickets, servicenow_info = await fetch_servicenow_incident_count()
     return {
         "timestamp": utc_now(),
         "agent_status": "running",
         "cluster": "hub",
         "site": "edge-01",
         "open_incidents": tickets,
-        "servicenow": servicenow_state,
+        "servicenow": servicenow_info,
     }
 
 
@@ -169,7 +169,10 @@ async def integrations_endpoint(force_refresh: bool = False) -> dict:
 
 @app.post("/api/demo/trigger")
 async def trigger_demo(req: DemoTriggerRequest) -> dict:
-    event = build_demo_event(req.scenario, req.site)
+    from uuid import uuid4
+
+    incident_id = str(uuid4())
+    event = build_demo_event(req.scenario, req.site, incident_id)
     try:
         offset = await asyncio.to_thread(publish_demo_event, event)
     except Exception as exc:
@@ -178,6 +181,7 @@ async def trigger_demo(req: DemoTriggerRequest) -> dict:
             "timestamp": utc_now(),
             "status": "error",
             "error": str(exc),
+            "incident_id": incident_id,
             "scenario": req.scenario,
             "site": req.site,
         })
@@ -186,6 +190,7 @@ async def trigger_demo(req: DemoTriggerRequest) -> dict:
     return {
         "timestamp": utc_now(),
         "status": "queued",
+        "incident_id": incident_id,
         "scenario": scenario,
         "site": req.site,
         "topic": DEMO_TOPIC,
@@ -221,15 +226,20 @@ async def chat(req: ChatRequest) -> dict:
     mcp_items = get_mcp_items(integrations_data)
 
     return {
-        "timestamp": utc_now(),
         "session_id": session_id,
+        "timestamp": utc_now(),
         "reply": reply,
-        "model_name": MODEL_NAME,
-        "model_source": model_source,
-        "open_incidents": summary_data.get("open_incidents"),
-        "site": summary_data.get("site"),
-        "integrations_up": integrations_data.get("up"),
-        "integrations_total": integrations_data.get("total"),
+        "model": {
+            "name": MODEL_NAME,
+            "source": model_source,
+            "framework": "LangGraph + MCP",
+        },
+        "context": {
+            "open_incidents": summary_data.get("open_incidents"),
+            "site": summary_data.get("site"),
+            "integrations_up": integrations_data.get("up"),
+            "integrations_total": integrations_data.get("total"),
+        },
         "mcp_status": mcp_items,
     }
 

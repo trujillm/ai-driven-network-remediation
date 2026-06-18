@@ -39,24 +39,27 @@ async def probe_http(url: str, timeout: float = 4.0) -> dict[str, Any]:
         return {"status": "down", "http_code": None, "reachable": False}
 
 
-async def fetch_servicenow_incident_count() -> tuple[int, str]:
+async def fetch_servicenow_incident_count() -> tuple[int, dict[str, Any]]:
     """Get open incident count from ServiceNow (real or mock).
 
     NOTE: Direct HTTP for now (single query). Consider a ServiceNow SDK or
     dedicated client wrapper if we expand to creating/updating tickets or CMDB queries.
+
+    Returns (count, servicenow_info_dict).
     """
+    mode = "real" if is_real_servicenow() else "mock"
     try:
         async with httpx.AsyncClient(timeout=8.0, verify=SSL_VERIFY) as client:
-            if is_real_servicenow():
+            if mode == "real":
                 logger.debug("Querying real ServiceNow at %s", SERVICENOW_URL)
                 resp = await client.get(
                     f"{SERVICENOW_URL}/api/now/table/incident?sysparm_limit=100&sysparm_fields=number",
                     auth=(SERVICENOW_USERNAME, SERVICENOW_PASSWORD),
                 )
                 if resp.status_code == 200:
-                    return len(resp.json().get("result", [])), "up"
+                    return len(resp.json().get("result", [])), {"mode": mode, "reachable": True}
                 logger.warning("ServiceNow returned HTTP %d", resp.status_code)
-                return 0, f"http-{resp.status_code}"
+                return 0, {"mode": mode, "reachable": False}
 
             resp = await client.get(
                 f"{SERVICENOW_URL}/api/now/table/incident",
@@ -64,8 +67,8 @@ async def fetch_servicenow_incident_count() -> tuple[int, str]:
             )
             if resp.status_code == 200:
                 data = resp.json()
-                return int(data.get("count", 0)), "up"
-            return 0, f"http-{resp.status_code}"
+                return int(data.get("count", 0)), {"mode": mode, "reachable": True}
+            return 0, {"mode": mode, "reachable": False}
     except Exception:
         logger.warning("ServiceNow unreachable at %s", SERVICENOW_URL, exc_info=True)
-        return 0, "down"
+        return 0, {"mode": mode, "reachable": False}
