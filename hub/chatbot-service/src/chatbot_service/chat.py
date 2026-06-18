@@ -39,7 +39,12 @@ def build_chat_context(
 
 
 async def call_model(prompt: str) -> tuple[str, str]:
-    """Call the LLM endpoint. Returns (reply_text, source)."""
+    """Call the LLM endpoint. Returns (reply_text, source).
+
+    NOTE: Minimal implementation sufficient for V1 (single vLLM endpoint).
+    Consider replacing with litellm/llama-index if we need streaming,
+    multi-model fallback, or token management.
+    """
     if not MODEL_API_URL:
         return "", "disabled"
     payload = {
