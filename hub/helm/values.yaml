@@ -6,6 +6,7 @@ image:
   chatbotService: hub-chatbot-service
   ingestionPipeline: hub-ingestion-pipeline
   agentService: hub-agent-service
+  frontend: noc-frontend
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
   tag: "0.0.1"
@@ -112,6 +113,26 @@ chatbotService:
       path: /ready
       port: 8080
     initialDelaySeconds: 10
+    periodSeconds: 10
+
+frontend:
+  replicaCount: 1
+  service:
+    type: ClusterIP
+    port: 80
+    targetPort: 8080
+  resources: {}
+  livenessProbe:
+    httpGet:
+      path: /
+      port: 8080
+    initialDelaySeconds: 5
+    periodSeconds: 10
+  readinessProbe:
+    httpGet:
+      path: /
+      port: 8080
+    initialDelaySeconds: 5
     periodSeconds: 10
 
 agentService:
