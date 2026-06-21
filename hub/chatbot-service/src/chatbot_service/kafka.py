@@ -35,6 +35,7 @@ def fetch_recent_audits() -> tuple[list[dict[str, Any]], bool]:
             auto_offset_reset="latest",
             enable_auto_commit=False,
             consumer_timeout_ms=2500,
+            request_timeout_ms=10000,
             value_deserializer=lambda m: m.decode("utf-8", errors="replace"),
         )
     except Exception:
