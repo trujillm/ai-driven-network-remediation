@@ -73,7 +73,8 @@ runs:
             --set kafka.resources.requests.cpu=100m \
             --set kafka.resources.requests.memory=256Mi \
             --set kafka.resources.limits.cpu=500m \
-            --set kafka.resources.limits.memory=512Mi"
+            --set kafka.resources.limits.memory=512Mi \
+            --set-string kafka.jvmHeapOpts='-Xmx384m -Xms256m'"
       shell: bash
 
     - name: Wait for Kafka topics to be created
