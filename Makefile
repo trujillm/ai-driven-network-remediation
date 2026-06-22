@@ -83,6 +83,8 @@ EXTRA_BUILD_PUSH_IMAGES := \
 	$(AAP_MOCK_IMG) \
 	$(SERVICENOW_MOCK_IMG)
 
+# `build-all-images` and `push-all-images` operate on the core images only.
+# The mock images are handled by the dedicated `build-push-*` targets below.
 ALL_BUILD_PUSH_IMAGES := \
 	$(CORE_BUILD_PUSH_IMAGES) \
 	$(EXTRA_BUILD_PUSH_IMAGES)
@@ -148,19 +150,13 @@ build-mcp-images:
 
 .PHONY: push-all-images
 push-all-images:
-	$(CONTAINER_TOOL) push $(CHATBOT_IMG) $(PUSH_EXTRA_ARGS)
-	$(CONTAINER_TOOL) push $(INGESTION_IMG) $(PUSH_EXTRA_ARGS)
-	$(CONTAINER_TOOL) push $(AGENT_IMG) $(PUSH_EXTRA_ARGS)
-	$(CONTAINER_TOOL) push $(MCP_OPENSHIFT_IMG) $(PUSH_EXTRA_ARGS)
-	$(CONTAINER_TOOL) push $(MCP_LOKISTACK_IMG) $(PUSH_EXTRA_ARGS)
-	$(CONTAINER_TOOL) push $(MCP_KAFKA_IMG) $(PUSH_EXTRA_ARGS)
-	$(CONTAINER_TOOL) push $(MCP_AAP_IMG) $(PUSH_EXTRA_ARGS)
-	$(CONTAINER_TOOL) push $(MCP_SLACK_IMG) $(PUSH_EXTRA_ARGS)
-	$(CONTAINER_TOOL) push $(MCP_SERVICENOW_IMG) $(PUSH_EXTRA_ARGS)
+	@for image in $(CORE_BUILD_PUSH_IMAGES); do \
+		$(CONTAINER_TOOL) push $$image $(PUSH_EXTRA_ARGS); \
+	done
 
 .PHONY: print-all-images
 print-all-images:
-	@printf '%s\n' $(ALL_BUILD_PUSH_IMAGES)
+	@printf '%s\n' $(CORE_BUILD_PUSH_IMAGES)
 
 .PHONY: build-push-aap-mock
 build-push-aap-mock:
