@@ -66,14 +66,15 @@ hub/frontend/
     ├── hooks/
     │   └── usePolling.js # 10s interval polling hook
     └── components/
+        ├── DegradedBanner.jsx    # Amber banner for _deps.status: "degraded"
         ├── HeaderMetrics.jsx     # Hero bar with totals
-        ├── StatusCards.jsx       # 6 status cards
+        ├── StatusCards.jsx       # 6 status cards (dep-aware)
         ├── IntegrationMatrix.jsx # MCP/platform health grid
         ├── SloPanel.jsx          # SLO metrics
         ├── BusinessImpact.jsx    # Cost/time savings
         ├── IncidentTimeline.jsx  # Incident movie replay
         ├── DemoTrigger.jsx       # 4 demo scenario buttons
-        └── ChatPanel.jsx         # NOC chat with structured replies
+        └── ChatPanel.jsx         # NOC chat with structured replies (dep-aware)
 ```
 
 ## API Response Shapes (V1)
@@ -97,6 +98,34 @@ data.incident_id  // UUID for traceability
 // Demo trigger failure
 HTTP 502 + { status: "error", detail: "..." }  // not HTTP 200
 ```
+
+### Dependency Status (`_deps`)
+
+All BFF data endpoints now include a `_deps` field signaling whether the response contains complete or partial data:
+
+```jsonc
+// All deps healthy — data is complete
+{ "_deps": { "status": "ok" }, "open_incidents": 3, ... }
+
+// Some deps unavailable — data is partial/fallback
+{ "_deps": { "status": "degraded", "unavailable": ["kafka", "servicenow"] }, "open_incidents": 0, ... }
+```
+
+The frontend handles this with a single universal check:
+
+| Condition | UI Behavior |
+|-----------|-------------|
+| `_deps.status === "ok"` (or `_deps` absent) | Normal display — no visual change |
+| `_deps.status === "degraded"` | Amber banner at page top listing unavailable deps; affected cards show "unavailable" instead of misleading zeros |
+
+Per-endpoint degradation mapping:
+
+| Endpoint | Degrades when | Frontend effect |
+|----------|---------------|-----------------|
+| `/api/summary` | ServiceNow unreachable | ServiceNow card → "unavailable", Open Incidents card → "unavailable" |
+| `/api/integrations` | Kafka or any probe down | Amber banner appears |
+| `/api/chat` | LLM unreachable (fallback reply) | Reply annotated with `[⚠ Partial — ... unavailable]` |
+| `/api/demo/trigger` | Kafka down | HTTP 502 (existing error handling) |
 
 ## Build & Deploy
 

@@ -61,9 +61,14 @@ export function ChatPanel({ baseUrl }) {
         throw new Error(`Non-JSON response (${res.status})`);
       }
       const data = await res.json();
+      const chatDeps = data._deps || { status: "ok" };
+      const degradedNote =
+        chatDeps.status === "degraded"
+          ? ` [⚠ Partial — ${(chatDeps.unavailable || []).join(", ")} unavailable]`
+          : "";
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", text: data.reply || "No response" },
+        { role: "assistant", text: (data.reply || "No response") + degradedNote },
       ]);
 
       const model = data.model || {};
@@ -76,6 +81,7 @@ export function ChatPanel({ baseUrl }) {
         integrationsTotal: context.integrations_total || 0,
         openIncidents: context.open_incidents || 0,
         mcpStatus: data.mcp_status || [],
+        degraded: chatDeps.status === "degraded",
       });
 
       if (asBrief) {

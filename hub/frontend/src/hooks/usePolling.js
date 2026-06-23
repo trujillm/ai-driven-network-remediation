@@ -2,6 +2,22 @@ import { useEffect, useRef, useState } from "react";
 
 const POLL_INTERVAL = 10_000;
 
+function extractDeps(data) {
+  if (!data || !data._deps) return { status: "ok", unavailable: [] };
+  return {
+    status: data._deps.status || "ok",
+    unavailable: data._deps.unavailable || [],
+  };
+}
+
+function mergeDeps(a, b) {
+  if (a.status === "ok" && b.status === "ok") {
+    return { status: "ok", unavailable: [] };
+  }
+  const unavailable = [...new Set([...a.unavailable, ...b.unavailable])];
+  return { status: "degraded", unavailable };
+}
+
 export function usePolling(baseUrl) {
   const [summary, setSummary] = useState({
     agent_status: "unknown",
@@ -23,6 +39,7 @@ export function usePolling(baseUrl) {
     business_impact: {},
   });
 
+  const [deps, setDeps] = useState({ status: "ok", unavailable: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
@@ -53,6 +70,7 @@ export function usePolling(baseUrl) {
         if (activeRef.current) {
           setSummary(summaryData);
           setIntegrations(integrationsData);
+          setDeps(mergeDeps(extractDeps(summaryData), extractDeps(integrationsData)));
           setLastUpdated(new Date());
           setError(null);
         }
@@ -76,5 +94,5 @@ export function usePolling(baseUrl) {
     };
   }, [baseUrl]);
 
-  return { summary, integrations, loading, error, lastUpdated };
+  return { summary, integrations, deps, loading, error, lastUpdated };
 }

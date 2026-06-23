@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { usePolling } from "./hooks/usePolling";
+import { DegradedBanner } from "./components/DegradedBanner";
 import { HeaderMetrics } from "./components/HeaderMetrics";
 import { StatusCards } from "./components/StatusCards";
 import { IntegrationMatrix } from "./components/IntegrationMatrix";
@@ -22,16 +23,17 @@ function getBaseUrl() {
 
 export default function App() {
   const baseUrl = useMemo(getBaseUrl, []);
-  const { summary, integrations, lastUpdated } = usePolling(baseUrl);
+  const { summary, integrations, deps, lastUpdated } = usePolling(baseUrl);
 
   return (
     <main className="page">
+      <DegradedBanner deps={deps} />
       <HeaderMetrics
         integrations={integrations}
         summary={summary}
         lastUpdated={lastUpdated}
       />
-      <StatusCards summary={summary} integrations={integrations} />
+      <StatusCards summary={summary} integrations={integrations} deps={deps} />
       <IntegrationMatrix integrations={integrations} summary={summary} />
       <SloPanel slo={integrations.slo} integrations={integrations} />
       <BusinessImpact impact={integrations.business_impact} />
