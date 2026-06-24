@@ -37,15 +37,18 @@ def build_chat_context(
 
     return (
         "You are the NOC assistant for an AI-driven network remediation system.\n"
-        "Return concise, actionable text. Use headers: Summary, MCP Status, Model Output, Next Action.\n"
-        "Keep output under 140 words.\n"
-        f"Model: {MODEL_NAME}\n"
-        f"Site: {summary_data.get('site')} | Cluster: {summary_data.get('cluster')}\n"
-        f"Open incidents: {summary_data.get('open_incidents')}\n"
-        f"Integrations up/total: {integrations_data.get('up')}/{integrations_data.get('total')}\n"
-        f"MCP status: {mcp_line}\n"
-        f"Recent conversation: {convo}\n"
-        f"User request: {user_message}"
+        "Answer the user's request directly with concise, actionable analysis.\n"
+        "Do NOT repeat headers or formatting — just provide your insight and recommendations.\n"
+        "Keep output under 200 words.\n\n"
+        f"Current state:\n"
+        f"- Model: {MODEL_NAME}\n"
+        f"- Site: {summary_data.get('site')} | Cluster: {summary_data.get('cluster')}\n"
+        f"- Open incidents: {summary_data.get('open_incidents')}\n"
+        f"- Integrations up/total: {integrations_data.get('up')}/{integrations_data.get('total')}\n"
+        f"- MCP status: {mcp_line}\n"
+        f"- Recent conversation: {convo}\n\n"
+        f"User request: {user_message}\n\n"
+        "Your analysis:"
     )
 
 
@@ -107,8 +110,7 @@ def format_chat_reply(
     total = integrations_data.get("total", 0)
 
     if raw_reply:
-        lines = [line.strip() for line in raw_reply.splitlines() if line.strip()]
-        model_insight = lines[0][:220] if lines else "Model inference completed."
+        model_insight = raw_reply.strip()[:500]
     else:
         model_insight = "Live model unavailable; using deterministic operational fallback."
 
