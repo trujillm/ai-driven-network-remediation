@@ -15,7 +15,7 @@ class TestAlertTopics:
         }
         result = parse_kafka_message(topic, json.dumps(payload).encode())
 
-        assert result == "nginx CrashLoopBackOff in namespace dark-noc-edge"
+        assert result == json.dumps(payload, separators=(",", ":"), sort_keys=True)
 
     def test_plain_text(self, topic):
         result = parse_kafka_message(topic, b"nginx CrashLoopBackOff in namespace prod")
@@ -34,11 +34,11 @@ class TestJsonWithoutMessage:
 
         assert result == json.dumps(payload, separators=(",", ":"), sort_keys=True)
 
-    def test_empty_message_field_returns_none(self):
+    def test_empty_message_field_preserves_full_payload(self):
         payload = {"message": "   ", "severity": "low"}
         result = parse_kafka_message("noc-alerts", json.dumps(payload).encode())
 
-        assert result is None
+        assert result == json.dumps(payload, separators=(",", ":"), sort_keys=True)
 
     def test_json_array_serializes(self):
         payload = [{"alert": "OOMKilled"}, {"alert": "CrashLoopBackOff"}]

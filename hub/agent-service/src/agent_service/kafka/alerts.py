@@ -16,14 +16,7 @@ def _parse_alert_payload(text: str) -> str | None:
         except json.JSONDecodeError:
             return stripped
 
-        if isinstance(parsed, dict):
-            message = parsed.get("message")
-            if message is not None:
-                message_text = str(message).strip()
-                return message_text or None
-            return json.dumps(parsed, separators=(",", ":"), sort_keys=True)
-
-        return json.dumps(parsed, separators=(",", ":"))
+        return json.dumps(parsed, separators=(",", ":"), sort_keys=True)
 
     return stripped
 
