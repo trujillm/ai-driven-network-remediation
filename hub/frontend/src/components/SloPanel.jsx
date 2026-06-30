@@ -13,8 +13,8 @@ function formatDuration(seconds) {
 export function SloPanel({ slo, integrations }) {
   const metrics = useMemo(() => {
     const s = slo || {};
-    const items = integrations.integrations || [];
-    const total = items.length || 0;
+    const items = Array.isArray(integrations?.integrations) ? integrations.integrations : [];
+    const total = items.length;
     const up = items.filter((i) => i.status === "up").length;
     const availability = Number(
       s.platform_availability_pct ?? (total > 0 ? (up / total) * 100 : 0)

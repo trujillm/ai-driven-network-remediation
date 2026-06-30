@@ -68,7 +68,7 @@ export function ChatPanel({ baseUrl }) {
           : "";
       setMessages((prev) => [
         ...prev,
-        { role: "assistant", text: (data.reply || "No response") + degradedNote },
+        { role: "assistant", text: (data.reply || "No response") + degradedNote, brief: asBrief },
       ]);
 
       const model = data.model || {};
@@ -156,7 +156,9 @@ export function ChatPanel({ baseUrl }) {
       <div className="chat-log">
         {messages.map((item, idx) => {
           const parsed =
-            item.role === "assistant" ? parseExecutiveReply(item.text) : null;
+            item.role === "assistant" && item.brief
+              ? parseExecutiveReply(item.text)
+              : null;
           return (
             <article
               key={`${item.role}-${idx}`}
@@ -169,7 +171,7 @@ export function ChatPanel({ baseUrl }) {
                     <section key={section.title} className="exec-section">
                       <h4>{section.title}</h4>
                       <ul>
-                        {section.lines.map((line, lineIdx) => (
+                        {(section.lines || []).map((line, lineIdx) => (
                           <li key={`${section.title}-${lineIdx}`}>{line}</li>
                         ))}
                       </ul>

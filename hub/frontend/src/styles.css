@@ -541,6 +541,32 @@ body {
   color: #ffa500;
 }
 
+/* Error boundary fallback */
+.error-boundary {
+  max-width: 600px;
+  margin: 60px auto;
+  padding: 24px;
+  background: rgba(220, 50, 50, 0.08);
+  border: 1px solid rgba(220, 50, 50, 0.4);
+  border-radius: 10px;
+  color: var(--fg);
+  text-align: center;
+}
+
+.error-boundary pre {
+  margin: 12px 0;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  overflow-x: auto;
+  text-align: left;
+}
+
+.error-boundary button {
+  margin-top: 12px;
+}
+
 @media (max-width: 880px) {
   .page {
     padding: 14px;

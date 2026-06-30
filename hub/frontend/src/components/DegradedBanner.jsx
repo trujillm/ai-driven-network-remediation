@@ -6,7 +6,7 @@ export function DegradedBanner({ deps }) {
       <span className="degraded-icon">⚠</span>
       <span>
         Partial data &mdash; unavailable:{" "}
-        <strong>{deps.unavailable.join(", ")}</strong>
+        <strong>{(deps.unavailable || []).join(", ")}</strong>
       </span>
     </div>
   );
