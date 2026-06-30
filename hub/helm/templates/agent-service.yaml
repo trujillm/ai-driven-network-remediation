@@ -30,8 +30,10 @@ spec:
               value: {{ .Values.agentService.granite.modelName | quote }}
             - name: KAFKA_BOOTSTRAP
               value: {{ .Values.agentService.env.kafkaBootstrap | quote }}
+            {{- if .Values.agentService.env.kafkaConsumeTopics }}
             - name: KAFKA_CONSUME_TOPICS
               value: {{ .Values.agentService.env.kafkaConsumeTopics | quote }}
+            {{- end }}
             - name: KAFKA_GROUP_ID
               value: {{ .Values.agentService.env.kafkaGroupId | quote }}
             - name: KAFKA_AUDIT_TOPIC
