@@ -139,6 +139,12 @@ agentService:
   replicaCount: 1
   granite:
     modelName: "granite-4.0-8b"
+  env:
+    kafkaBootstrap: "kafka:9092"
+    kafkaConsumeTopics: "system-alerts,noc-alerts"
+    kafkaGroupId: "dark-noc-agent"
+    kafkaAuditTopic: "incident-audit"
+    kafkaConsumerEnabled: "true"
   service:
     type: ClusterIP
     port: 8001
