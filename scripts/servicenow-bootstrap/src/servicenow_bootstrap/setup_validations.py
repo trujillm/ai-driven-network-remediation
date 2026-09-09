@@ -268,8 +268,8 @@ def _resolve_validation_auth() -> Dict[str, Optional[str]]:
     if api_key and api_key != "hidden":
         return {"api_key": api_key, "username": None, "password": None}
 
-    user_id = creds.get("user_id")
-    password = creds.get("password")
+    user_id = os.getenv("SERVICENOW_USERNAME") or creds.get("user_id")
+    password = os.getenv("SERVICENOW_PASSWORD") or creds.get("password")
     if user_id and password and password != "existing_user":
         return {"api_key": None, "username": user_id, "password": password}
 
