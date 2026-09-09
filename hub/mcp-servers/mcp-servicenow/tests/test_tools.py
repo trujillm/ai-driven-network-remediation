@@ -45,15 +45,26 @@ def _make_ctx():
 class TestSnowClient:
     """Tests for the _snow_client factory."""
 
+    @patch("mcp_servicenow.tools.SNOW_API_KEY", "")
     @patch("mcp_servicenow.tools.SNOW_USERNAME", "admin")
     @patch("mcp_servicenow.tools.SNOW_PASSWORD", "secret")
     @patch("mcp_servicenow.tools.httpx.Client")
-    def test_always_uses_basic_auth(self, mock_client_cls):
+    def test_uses_basic_auth_when_no_api_key(self, mock_client_cls):
         _snow_client()
         mock_client_cls.assert_called_once()
         kwargs = mock_client_cls.call_args.kwargs
         assert "/api/now" in kwargs["base_url"]
         assert kwargs["auth"] == ("admin", "secret")
+        assert "x-sn-apikey" not in kwargs["headers"]
+
+    @patch("mcp_servicenow.tools.SNOW_API_KEY", "snow-token-abc")
+    @patch("mcp_servicenow.tools.httpx.Client")
+    def test_uses_api_key_header_when_set(self, mock_client_cls):
+        _snow_client()
+        mock_client_cls.assert_called_once()
+        kwargs = mock_client_cls.call_args.kwargs
+        assert kwargs["headers"]["x-sn-apikey"] == "snow-token-abc"
+        assert "auth" not in kwargs
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -316,6 +327,38 @@ class TestResolveIncident:
         )
         assert result["success"] is True
         assert result["resolution_code"] == "Solved (Workaround)"
+        assert ctx.patch.call_count == 1
+
+    def test_close_code_fallback(self, mock_client):
+        lookup_data = {"result": [{"sys_id": "abc123", "number": "INC0000001"}]}
+        ctx = _make_ctx()
+        ctx.get.return_value = _mock_response(json_data=lookup_data)
+        ctx.patch.side_effect = [
+            _mock_response(status_code=403, text="Invalid close_code"),
+            _mock_response(json_data={"result": {}}),
+        ]
+        mock_client.return_value = ctx
+
+        result = resolve_incident(ticket_number="INC0000001", resolution_notes="Fixed")
+        assert result["success"] is True
+        assert result["resolution_code"] == "Solution provided"
+        assert ctx.patch.call_count == 2
+
+    def test_explicit_resolution_code_no_fallback(self, mock_client):
+        lookup_data = {"result": [{"sys_id": "abc123", "number": "INC0000001"}]}
+        ctx = _make_ctx()
+        ctx.get.return_value = _mock_response(json_data=lookup_data)
+        ctx.patch.return_value = _mock_response(status_code=403, text="Invalid close_code")
+        mock_client.return_value = ctx
+
+        result = resolve_incident(
+            ticket_number="INC0000001",
+            resolution_notes="Fixed",
+            resolution_code="Solved (Permanently)",
+        )
+        assert result["success"] is False
+        assert "403" in result["error"]
+        assert ctx.patch.call_count == 1
 
     def test_not_found(self, mock_client):
         ctx = _make_ctx()

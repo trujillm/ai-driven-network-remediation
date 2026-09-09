@@ -9,6 +9,7 @@ from .config import (
     SLACK_BASE_URL,
     SLACK_BOT_TOKEN,
     SLACK_NOC_CHANNEL,
+    SNOW_API_KEY,
     SNOW_CALLER_NAME,
     SNOW_PASSWORD,
     SNOW_URL,
@@ -18,15 +19,35 @@ from .config import (
 
 MAX_SHORT_DESCRIPTION_LEN = 160
 
+# PDI instances vary on accepted close_code values; try in order when none is specified.
+_CLOSE_CODE_FALLBACKS = [
+    "Solved (Permanently)",
+    "Solution provided",
+    "Closed/Resolved by Caller",
+    "Resolved by caller",
+    "Known error",
+    "Duplicate",
+    "Workaround provided",
+]
+
 
 def _snow_client() -> httpx.Client:
-    """Create httpx client for ServiceNow API — always uses Basic Auth."""
-    return httpx.Client(
-        base_url=f"{SNOW_URL}/api/now",
-        headers={"Content-Type": "application/json"},
-        auth=(SNOW_USERNAME, SNOW_PASSWORD),
-        timeout=15,
-    )
+    """Create httpx client for ServiceNow Table API.
+
+    Uses ``x-sn-apikey`` when ``SERVICENOW_API_KEY`` is set (production
+    noc_agent path). Falls back to Basic Auth for mock and admin bootstrap.
+    """
+    headers = {"Content-Type": "application/json"}
+    client_kwargs: dict = {
+        "base_url": f"{SNOW_URL}/api/now",
+        "headers": headers,
+        "timeout": 15,
+    }
+    if SNOW_API_KEY:
+        headers["x-sn-apikey"] = SNOW_API_KEY
+    else:
+        client_kwargs["auth"] = (SNOW_USERNAME, SNOW_PASSWORD)
+    return httpx.Client(**client_kwargs)
 
 
 def _lookup_incident(client: httpx.Client, ticket_number: str) -> dict:
@@ -250,7 +271,7 @@ def get_incident(ticket_number: str) -> dict:
 def resolve_incident(
     ticket_number: str,
     resolution_notes: str,
-    resolution_code: str = "Solved (Permanently)",
+    resolution_code: str | None = None,
 ) -> dict:
     """
     Resolve a ServiceNow incident with resolution notes.
@@ -258,32 +279,42 @@ def resolve_incident(
     Args:
         ticket_number:    ServiceNow incident number
         resolution_notes: Explanation of how the issue was resolved
-        resolution_code:  Standard resolution code
+        resolution_code:  Standard resolution code; when omitted, tries PDI-specific fallbacks
 
     Returns:
         Dict with resolution confirmation
     """
-    try:
-        payload = {
-            "state": "6",
-            "close_code": resolution_code,
-            "resolution_code": resolution_code,
-            "close_notes": resolution_notes,
-            "resolved_by": "noc-agent",
-        }
+    codes_to_try = [resolution_code] if resolution_code else _CLOSE_CODE_FALLBACKS
+    last_error = ""
 
+    try:
         with _snow_client() as client:
             record = _lookup_incident(client, ticket_number)
             sys_id = record["sys_id"]
-            resp = client.patch(f"/table/incident/{sys_id}", json=payload)
-            resp.raise_for_status()
 
-        return {
-            "success": True,
-            "ticket_number": ticket_number,
-            "state": "Resolved",
-            "resolution_code": resolution_code,
-        }
+            for close_code in codes_to_try:
+                payload = {
+                    "state": "6",
+                    "close_code": close_code,
+                    "resolution_code": close_code,
+                    "close_notes": resolution_notes,
+                    "resolved_by": "noc-agent",
+                }
+                resp = client.patch(f"/table/incident/{sys_id}", json=payload)
+                try:
+                    resp.raise_for_status()
+                except httpx.HTTPStatusError as e:
+                    last_error = f"ServiceNow API error: {e.response.status_code} – {e.response.text[:200]}"
+                    continue
+
+                return {
+                    "success": True,
+                    "ticket_number": ticket_number,
+                    "state": "Resolved",
+                    "resolution_code": close_code,
+                }
+
+        return {"success": False, "error": last_error or "Failed to resolve incident"}
     except httpx.HTTPStatusError as e:
         return {"success": False, "error": f"ServiceNow API error: {e.response.status_code} – {e.response.text[:200]}"}
     except httpx.HTTPError as e:

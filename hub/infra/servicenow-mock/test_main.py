@@ -45,6 +45,15 @@ class TestAuth:
         )
         assert resp.status_code == 201
 
+    def test_valid_api_key_passes(self, monkeypatch, client):
+        monkeypatch.setenv("SERVICENOW_API_KEY", "demo-api-key-2026")
+        resp = client.post(
+            "/api/now/table/incident",
+            json={"short_description": "test"},
+            headers={"x-sn-apikey": "demo-api-key-2026"},
+        )
+        assert resp.status_code == 201
+
 
 class TestCreateIncident:
     def test_returns_result_with_number_and_sys_id(self, client):
