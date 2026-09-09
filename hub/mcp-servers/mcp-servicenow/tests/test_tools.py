@@ -1,9 +1,12 @@
 """Unit tests for mcp_servicenow tools (ServiceNow + Slack HTTP is always mocked)."""
 
+import json
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import httpx
 from mcp_servicenow.tools import (
+    _resolve_close_codes,
     _snow_client,
     create_incident,
     get_incident,
@@ -285,6 +288,40 @@ class TestGetIncident:
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Shared close codes
+# ─────────────────────────────────────────────────────────────────────────────
+
+
+def test_close_codes_match_contracts():
+    repo_root = Path(__file__).resolve().parents[4]
+    contracts = json.loads((repo_root / "contracts" / "servicenow-close-codes.json").read_text(encoding="utf-8"))
+    packaged = json.loads(
+        (repo_root / "hub/mcp-servers/mcp-servicenow/src/mcp_servicenow/close_codes.json").read_text(encoding="utf-8")
+    )
+    assert contracts == packaged
+
+
+class TestResolveCloseCodes:
+    def test_explicit_code_skips_instance_lookup(self):
+        ctx = _make_ctx()
+        codes = _resolve_close_codes(ctx, "Solution provided")
+        assert codes == ["Solution provided"]
+        ctx.get.assert_not_called()
+
+    def test_prefers_instance_matched_fallback(self):
+        ctx = _make_ctx()
+        ctx.get.return_value = _mock_response(
+            json_data={
+                "result": [
+                    {"label": "Solution provided", "value": "solution_provided"},
+                ]
+            }
+        )
+        codes = _resolve_close_codes(ctx, None)
+        assert codes == ["Solution provided"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # resolve_incident
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -295,8 +332,12 @@ class TestResolveIncident:
 
     def test_success_uses_sys_id(self, mock_client):
         lookup_data = {"result": [{"sys_id": "real-sys-001", "number": "INC0010001"}]}
+        choice_data = {"result": [{"label": "Solved (Permanently)", "value": "solved"}]}
         ctx = _make_ctx()
-        ctx.get.return_value = _mock_response(json_data=lookup_data)
+        ctx.get.side_effect = [
+            _mock_response(json_data=lookup_data),
+            _mock_response(json_data=choice_data),
+        ]
         ctx.patch.return_value = _mock_response(json_data={"result": {}})
         mock_client.return_value = ctx
 
@@ -305,6 +346,7 @@ class TestResolveIncident:
         assert result["ticket_number"] == "INC0010001"
         assert result["state"] == "Resolved"
         assert result["resolution_code"] == "Solved (Permanently)"
+        assert ctx.patch.call_count == 1
 
         patch_url = ctx.patch.call_args[0][0]
         assert "real-sys-001" in patch_url
@@ -332,7 +374,10 @@ class TestResolveIncident:
     def test_close_code_fallback(self, mock_client):
         lookup_data = {"result": [{"sys_id": "abc123", "number": "INC0000001"}]}
         ctx = _make_ctx()
-        ctx.get.return_value = _mock_response(json_data=lookup_data)
+        ctx.get.side_effect = [
+            _mock_response(json_data=lookup_data),
+            _mock_response(status_code=403, text="Forbidden"),
+        ]
         ctx.patch.side_effect = [
             _mock_response(status_code=403, text="Invalid close_code"),
             _mock_response(json_data={"result": {}}),

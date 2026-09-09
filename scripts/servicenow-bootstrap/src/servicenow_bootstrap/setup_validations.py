@@ -13,6 +13,7 @@ from typing import Any, Dict, Optional, Tuple
 
 import requests
 
+from .close_codes import load_close_code_fallbacks
 from .creds import load_creds_file
 from .servicenow_client import ServiceNowClient
 
@@ -140,20 +141,13 @@ class ServiceNowIncidentTester(ServiceNowClient):
 
         print("Testing incident RESOLVE...")
 
-        close_codes = [
-            "Solved (Permanently)",
-            "Solution provided",
-            "Closed/Resolved by Caller",
-            "Resolved by caller",
-            "Known error",
-            "Duplicate",
-            "Workaround provided",
-        ]
+        close_codes = load_close_code_fallbacks()
         last_error = ""
         for close_code in close_codes:
             payload = {
                 "state": "6",
                 "close_code": close_code,
+                "resolution_code": close_code,
                 "close_notes": "Validation: resolved by servicenow-bootstrap",
                 "resolved_by": "noc_agent",
             }

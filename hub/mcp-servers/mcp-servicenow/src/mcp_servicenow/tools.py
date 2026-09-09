@@ -5,6 +5,7 @@ from urllib.parse import quote
 
 import httpx
 
+from .close_codes import load_close_code_fallbacks
 from .config import (
     SLACK_BASE_URL,
     SLACK_BOT_TOKEN,
@@ -18,17 +19,6 @@ from .config import (
 )
 
 MAX_SHORT_DESCRIPTION_LEN = 160
-
-# PDI instances vary on accepted close_code values; try in order when none is specified.
-_CLOSE_CODE_FALLBACKS = [
-    "Solved (Permanently)",
-    "Solution provided",
-    "Closed/Resolved by Caller",
-    "Resolved by caller",
-    "Known error",
-    "Duplicate",
-    "Workaround provided",
-]
 
 
 def _snow_client() -> httpx.Client:
@@ -59,6 +49,50 @@ def _lookup_incident(client: httpx.Client, ticket_number: str) -> dict:
     if not results:
         raise ValueError(f"Incident not found: {ticket_number}")
     return results[0]
+
+
+def _instance_close_codes(client: httpx.Client) -> set[str]:
+    """Return close_code labels/values configured on this ServiceNow instance."""
+    resp = client.get(
+        "/table/sys_choice",
+        params={
+            "sysparm_query": "element=close_code^name=incident^inactive=false",
+            "sysparm_fields": "label,value",
+            "sysparm_limit": 100,
+        },
+    )
+    resp.raise_for_status()
+    codes: set[str] = set()
+    for choice in resp.json().get("result", []):
+        label = str(choice.get("label", "")).strip()
+        value = str(choice.get("value", "")).strip()
+        if label:
+            codes.add(label)
+        if value:
+            codes.add(value)
+    return codes
+
+
+def _resolve_close_codes(client: httpx.Client, resolution_code: str | None) -> list[str]:
+    """Pick close_code candidates: explicit value, instance choice, then shared fallbacks."""
+    if resolution_code:
+        return [resolution_code]
+
+    fallbacks = load_close_code_fallbacks()
+    try:
+        instance_codes = _instance_close_codes(client)
+    except httpx.HTTPError:
+        return fallbacks
+
+    if not instance_codes:
+        return fallbacks
+
+    matched = [code for code in fallbacks if code in instance_codes]
+    if matched:
+        return matched
+
+    first_instance_code = next(iter(instance_codes))
+    return [first_instance_code, *fallbacks]
 
 
 def _resolve_or_create_caller_sys_id(client: httpx.Client, display_name: str) -> str:
@@ -284,13 +318,13 @@ def resolve_incident(
     Returns:
         Dict with resolution confirmation
     """
-    codes_to_try = [resolution_code] if resolution_code else _CLOSE_CODE_FALLBACKS
     last_error = ""
 
     try:
         with _snow_client() as client:
             record = _lookup_incident(client, ticket_number)
             sys_id = record["sys_id"]
+            codes_to_try = _resolve_close_codes(client, resolution_code)
 
             for close_code in codes_to_try:
                 payload = {

@@ -13,7 +13,9 @@ Uses the same REST contract as a real ServiceNow instance:
 
 Authentication:
     HTTP Basic Auth (SERVICENOW_USERNAME / SERVICENOW_PASSWORD) or
-    API key header x-sn-apikey (SERVICENOW_API_KEY env var)
+    API key header x-sn-apikey (SERVICENOW_API_KEY env var).
+    When both are present, API key auth takes precedence (matches production
+    MCP client behavior, which sends one method only).
 
 Note: Error responses use FastAPI's default shape ({"detail": "..."}), not
 ServiceNow's ({"error": {"message": "...", "detail": "..."}, "status": "failure"}).

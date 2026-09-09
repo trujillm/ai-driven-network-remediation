@@ -20,10 +20,6 @@ def merge_creds_file(updates: Dict[str, Any]) -> None:
     creds = load_creds_file()
     creds.update(updates)
     fd = os.open(CREDS_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    try:
-        with os.fdopen(fd, "w", encoding="utf-8") as f:
-            json.dump(creds, f, indent=2)
-            f.write("\n")
-    except Exception:
-        os.close(fd)
-        raise
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
+        json.dump(creds, f, indent=2)
+        f.write("\n")

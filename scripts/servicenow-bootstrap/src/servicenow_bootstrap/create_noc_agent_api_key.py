@@ -39,7 +39,15 @@ class ServiceNowAPIAutomation(ServiceNowClient):
         if resolved and resolved != "hidden":
             merge_creds_file({"api_key": resolved.strip()})
             print("API key token saved to .servicenow-creds.json")
-        return resolved
+            return resolved
+
+        print(
+            "WARNING: Could not retrieve API key token automatically.\n"
+            "  Go to ServiceNow -> REST API Keys -> copy the token into "
+            ".servicenow-creds.json\n"
+            "  or set SERVICENOW_API_KEY in your environment before running validation."
+        )
+        return resolved or "hidden"
 
     def create_api_key(self) -> Dict[str, str]:
         """Create API key for the NOC agent user."""
